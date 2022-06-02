@@ -1,4 +1,7 @@
-use std::{env, fs, io};
+use std::{
+    env, fs,
+    io::{self, BufRead},
+};
 
 use chrono::prelude::*;
 use console::style;
@@ -92,6 +95,35 @@ fn run() -> io::Result<()> {
     Ok(())
 }
 
+fn get_posts_tags(target_dir: &str) -> Vec<String> {
+    let mut tags = vec![];
+    let tag_start = "tag:";
+    for entry in fs::read_dir(target_dir).unwrap() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        if !path.is_dir() {
+            println!("path: {:?}", path);
+            let file = fs::File::open(path).unwrap();
+            let fin = io::BufReader::new(file).lines();
+            for line in fin {
+                match line {
+                    Ok(l) => {
+                        if l.starts_with(tag_start) {
+                            let tmp = l.replace(tag_start, "");
+                            let tmp2 = tmp.trim().split(", ").collect::<Vec<&str>>();
+                            println!("line: {:?}", tmp2);
+                            break;
+                        }
+                    }
+                    _ => (),
+                }
+            }
+        }
+    }
+    tags
+}
+
 fn main() {
-    run().unwrap();
+    // run().unwrap();
+    println!("all tags: {:?}", get_posts_tags("md_target"))
 }
