@@ -1,6 +1,6 @@
 use std::{
     env, fs,
-    io::{self, BufRead},
+    io::{BufRead, BufReader, Result},
     path::PathBuf,
 };
 
@@ -21,7 +21,7 @@ struct PromptConfig<'a> {
     initial: &'a str,
 }
 
-fn run() -> io::Result<()> {
+fn run() -> Result<()> {
     let current_day = Local::now().naive_local().date().to_string();
     let mut target_file_name = PathBuf::new();
     let mut template_file_name = PathBuf::new();
@@ -113,18 +113,13 @@ fn get_posts_tags(target_dir: &str) -> Vec<String> {
         let path = entry.unwrap().path();
         if !path.is_dir() {
             let file = fs::File::open(path).unwrap();
-            let fin = io::BufReader::new(file).lines();
+            let fin = BufReader::new(file).lines();
             for line in fin {
                 let l = line.unwrap();
                 if l.starts_with(tag_start) {
                     let tmp = l.replace(tag_start, "");
-                    let tmp2 = tmp
-                        .trim()
-                        .split(", ")
-                        .map(|s| s.to_string())
-                        .collect::<Vec<String>>();
-                    for t in tmp2.iter() {
-                        if !tags.contains(t) {
+                    for t in tmp.trim().split(", ").map(|s| s.to_string()) {
+                        if !tags.contains(&t) {
                             tags.push(t.clone());
                         }
                     }
