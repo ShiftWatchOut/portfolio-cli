@@ -70,12 +70,11 @@ fn run() -> io::Result<()> {
                     .interact_text()?;
             }
             PromptType::Multiselect => {
-                let existing_tags = vec!["Option 1", "Option 2"];
+                let existing_tags = get_posts_tags("md_target");
                 let chosen: Vec<usize> = MultiSelect::new().items(&existing_tags).interact()?;
-                println!("multi select result: {:?}", chosen);
                 input = chosen
                     .iter()
-                    .map(|i| existing_tags[*i])
+                    .map(|i| existing_tags[*i].clone())
                     .collect::<Vec<_>>()
                     .join(", ");
             }
@@ -83,14 +82,12 @@ fn run() -> io::Result<()> {
                 input = String::from(config.initial);
             }
         }
-        println!("prompt result: {}", input);
         new_content = new_content.replace(
             ("{{ ".to_owned() + config.name + " }}").as_str(),
             input.as_str(),
         );
     }
     let target_file_name = "md_target/hello.md";
-    // println!("doc: \n{}", new_content);
     fs::write(target_file_name, new_content)?;
     Ok(())
 }
@@ -99,23 +96,25 @@ fn get_posts_tags(target_dir: &str) -> Vec<String> {
     let mut tags = vec![];
     let tag_start = "tag:";
     for entry in fs::read_dir(target_dir).unwrap() {
-        let entry = entry.unwrap();
-        let path = entry.path();
+        let path = entry.unwrap().path();
         if !path.is_dir() {
-            println!("path: {:?}", path);
             let file = fs::File::open(path).unwrap();
             let fin = io::BufReader::new(file).lines();
             for line in fin {
-                match line {
-                    Ok(l) => {
-                        if l.starts_with(tag_start) {
-                            let tmp = l.replace(tag_start, "");
-                            let tmp2 = tmp.trim().split(", ").collect::<Vec<&str>>();
-                            println!("line: {:?}", tmp2);
-                            break;
+                let l = line.unwrap();
+                if l.starts_with(tag_start) {
+                    let tmp = l.replace(tag_start, "");
+                    let tmp2 = tmp
+                        .trim()
+                        .split(", ")
+                        .map(|s| s.to_string())
+                        .collect::<Vec<String>>();
+                    for t in tmp2.iter() {
+                        if !tags.contains(t) {
+                            tags.push(t.clone());
                         }
                     }
-                    _ => (),
+                    break;
                 }
             }
         }
@@ -124,6 +123,5 @@ fn get_posts_tags(target_dir: &str) -> Vec<String> {
 }
 
 fn main() {
-    // run().unwrap();
-    println!("all tags: {:?}", get_posts_tags("md_target"))
+    run().unwrap();
 }
