@@ -1,6 +1,7 @@
 use std::{
     env, fs,
     io::{self, BufRead},
+    path::PathBuf,
 };
 
 use chrono::prelude::*;
@@ -22,30 +23,41 @@ struct PromptConfig<'a> {
 
 fn run() -> io::Result<()> {
     let current_day = Local::now().naive_local().date().to_string();
-    println!("今天是 {}", current_day);
+    let mut target_file_name = PathBuf::new();
+    let mut template_file_name = PathBuf::new();
+    let mut arg_count = 0;
     for arg in env::args() {
-        println!("arg: {}", style(arg).green());
+        match arg_count {
+            1 => template_file_name.push(arg),
+            2 => target_file_name.push(arg),
+            _ => (),
+        }
+        arg_count += 1;
     }
-    let source = fs::read_to_string("./template.md").unwrap();
+    if arg_count < 3 {
+        panic!("\n命令行没有足够的参数：\n    参数[1]：模板文件\n    参数[2]：目标文件夹\n")
+    }
+    println!("今天是 {} {}", current_day, style("☀️☀️☀️☀️☀️☀️").yellow());
+    let source = fs::read_to_string(template_file_name).unwrap();
     let configs = vec![
-        // PromptConfig {
-        //     name: "title",
-        //     type_name: PromptType::Input,
-        //     message: "博文标题",
-        //     initial: "New Post",
-        // },
-        // PromptConfig {
-        //     name: "filename",
-        //     type_name: PromptType::Input,
-        //     message: "MD 文件名(需要后缀)",
-        //     initial: "new-post.md",
-        // },
-        // PromptConfig {
-        //     name: "description",
-        //     type_name: PromptType::Input,
-        //     message: "简单说明",
-        //     initial: "description text",
-        // },
+        PromptConfig {
+            name: "title",
+            type_name: PromptType::Input,
+            message: "博文标题",
+            initial: "New Post",
+        },
+        PromptConfig {
+            name: "filename",
+            type_name: PromptType::Input,
+            message: "MD 文件名(需要后缀)",
+            initial: "new-post.md",
+        },
+        PromptConfig {
+            name: "description",
+            type_name: PromptType::Input,
+            message: "简单说明",
+            initial: "description text",
+        },
         PromptConfig {
             name: "date",
             type_name: PromptType::Outter,
@@ -82,12 +94,14 @@ fn run() -> io::Result<()> {
                 input = String::from(config.initial);
             }
         }
+        if config.name == "filename" {
+            target_file_name.push(&input);
+        }
         new_content = new_content.replace(
             ("{{ ".to_owned() + config.name + " }}").as_str(),
             input.as_str(),
         );
     }
-    let target_file_name = "md_target/hello.md";
     fs::write(target_file_name, new_content)?;
     Ok(())
 }
